@@ -1,0 +1,493 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xwl.mapper.AnswerMapper">
+
+    <!--
+    0.1 当前管理员 1
+        select * from m_user where user_id = '40959201064779776'
+    0.2 当前管理员名下的所有客户经理 10
+        select app_user_id from m_user where create_uid = '40959201064779776'
+    0.3 当前管理员名下所有门店
+        select * from store
+        where create_uid in (select app_user_id from m_user where create_uid = '40959201064779776')  客户经理创建的门店
+    -->
+
+    <!--    1.1 当前dev下,累计问卷数量 -->
+    <select id="getAnswerAmountByDevUserId" resultType="Integer">
+        SELECT count(DISTINCT(answer_id)) from answer
+    </select>
+
+    <!--    1.2 当前dev下,累计参与门店 -->
+    <select id="getStoreAmountByDevUserId" resultType="Integer">
+        SELECT count(DISTINCT(store_id)) FROM answer
+    </select>
+
+    <!-- 1.3 当前dev下，昨日新增问卷数量 -->
+    <select id="getLastdayAnswerAmountByDevUserId" resultType="Integer">
+        SELECT count(DISTINCT(answer_id)) FROM answer
+        WHERE create_time BETWEEN #{startOfYesterday} AND #{endOfYesterday}
+    </select>
+
+    <!--     1.4 当前dev下，昨日参与门店-->
+    <select id="getLastdayAnswerListStoreAmountByDevUserId" resultType="Integer">
+        SELECT count(DISTINCT store_id) FROM answer
+        WHERE create_time BETWEEN #{startOfYesterday} AND #{endOfYesterday}
+    </select>
+
+
+    <!-- 1.5 当前dev下，昨日新增问卷来源 answerTotalLastday -->
+    <select id="getGroupLastdayAnswerListByDevUserId" resultType="com.xwl.entity.Answer">
+        SELECT activity_id, count(DISTINCT(answer_id)) AS total FROM answer
+        WHERE create_time BETWEEN #{startOfYesterday} AND #{endOfYesterday}
+        GROUP BY activity_id
+    </select>
+
+    <!--    1.6 当前dev下，昨日门店来源 storeTotalLastday -->
+    <select id="getGroupLastdayAnswerListStoreAmountByDevUserId" resultType="com.xwl.entity.Answer">
+        SELECT activity_id, count(DISTINCT (store_id)) AS total FROM answer
+        WHERE create_time BETWEEN #{startOfYesterday} AND #{endOfYesterday}
+        GROUP BY activity_id
+    </select>
+
+    <!--    2.1 当前管理员下,累计问卷数量 -->
+<!--        <select id="getAnswerAmountByAdminUserId" resultType="Integer">-->
+<!--            SELECT count(*)-->
+<!--            from answer-->
+<!--            WHERE  user_id in (-->
+<!--                        select user_id from store-->
+<!--                        where   (-->
+<!--                                    create_uid=#{userId}		/*管理员创建的门店*/-->
+<!--                                    or-->
+<!--                                    create_uid in (select app_user_id from m_user where create_uid = #{userId})  /*客户经理创建的门店*/-->
+<!--                                )-->
+<!--                                and user_id!=0-->
+<!--                        UNION-->
+<!--                        select user_id from customer_store where store_id in (-->
+<!--                            select store_id from store-->
+<!--                            where   (-->
+<!--                                        create_uid=#{userId}		/*管理员创建的门店*/-->
+<!--                                        or-->
+<!--                                        create_uid in (select app_user_id from m_user where create_uid = #{userId})  /*客户经理创建的门店*/-->
+<!--                                    )-->
+<!--                                    and-->
+<!--                                    user_id!=0-->
+<!--                        )-->
+<!--                )-->
+<!--        </select>-->
+
+    <!--    2.1 当前管理员下,累计问卷数量 -->
+    <select id="getAnswerAmountByAdminUserId" resultType="Integer">
+        SELECT (
+                   SELECT count(*) from answer
+                   WHERE user_id in (
+                       select app_user_id from m_user
+                       where create_uid=#{userId}
+                   )
+               )
+                   +
+               (
+                   SELECT count(*) from answer
+                   WHERE store_id in (
+                       select store_id from store
+                       where create_uid in ( select app_user_id from m_user where create_uid=#{userId} )
+                         and is_delete=0
+                   )
+               )
+    </select>
+
+    <!--    2.2 当前管理员下,累计参与门店 -->
+<!--    <select id="getAnswerListStoreAmountByAdminUserId" resultType="Long">-->
+<!--        SELECT  distinct (store_id) from answer-->
+<!--        WHERE user_id in (-->
+<!--                    select user_id from store-->
+<!--                    where   (-->
+<!--                                create_uid=#{userId}		/*管理员创建的门店*/-->
+<!--                                or create_uid in (select app_user_id from m_user where create_uid = #{userId})  /*客户经理创建的门店*/-->
+<!--                            )-->
+<!--                            and-->
+<!--                            user_id!=0-->
+<!--                            and is_delete=0-->
+<!--                    UNION-->
+<!--                    select user_id from customer_store where store_id in (-->
+<!--                        select store_id from store-->
+<!--                        where   (-->
+<!--                                    create_uid=#{userId}		/*管理员创建的门店*/-->
+<!--                                    or create_uid in (select app_user_id from m_user where create_uid = #{userId})  /*客户经理创建的门店*/-->
+<!--                                )-->
+<!--                                and-->
+<!--                                user_id!=0-->
+<!--                                and is_delete=0-->
+<!--                    )-->
+<!--            )-->
+<!--    </select>-->
+
+    <!--    2.2 当前管理员下,累计参与门店 -->
+<!--    <select id="getStoreAmountByAdminUserId" resultType="Integer">-->
+<!--        SELECT count(*)-->
+<!--        FROM store-->
+<!--        WHERE is_delete=0-->
+<!--          AND create_uid IN (-->
+<!--                    SELECT app_user_id-->
+<!--                    FROM m_user-->
+<!--                    WHERE create_uid=#{userId}-->
+<!--                      AND app_user_id!=0-->
+<!--            )-->
+<!--    </select>-->
+    <!--    2.2 当前管理员下,累计参与门店 -->
+    <select id="getStoreAmountByAdminUserId" resultType="Integer">
+        SELECT count(*) FROM answer
+        WHERE store_id IN(
+                select distinct(store_id) from store
+                where create_uid IN ( select app_user_id from m_user where create_uid=#{userId} and app_user_id!=0 )
+                  and is_delete=0
+        )
+    </select>
+
+    <!-- 2.3 当前管理员下，昨日新增问卷数量 -->
+<!--    <select id="getLastdayAnswerListByAdminUserId" resultType="com.xwl.entity.Answer">-->
+<!--        SELECT * from answer-->
+<!--        WHERE  to_days(now())-to_days(create_time) = 1-->
+<!--        and user_id in (-->
+<!--                select user_id from store-->
+<!--                where   (-->
+<!--                            create_uid=#{userId}		/*管理员创建的门店*/-->
+<!--                            or-->
+<!--                            create_uid in (select app_user_id from m_user where create_uid = #{userId})  /*客户经理创建的门店*/-->
+<!--                        )-->
+<!--                        and-->
+<!--                        user_id!=0-->
+<!--                UNION-->
+<!--                select user_id from customer_store where store_id in (-->
+<!--                    select store_id from store-->
+<!--                    where   (-->
+<!--                                create_uid=#{userId}		/*管理员创建的门店*/-->
+<!--                                or create_uid in (select app_user_id from m_user where create_uid = #{userId})  /*客户经理创建的门店*/-->
+<!--                            )-->
+<!--                            and-->
+<!--                            user_id!=0-->
+<!--                )-->
+<!--            )-->
+<!--    </select>    -->
+
+    <!-- 2.3 当前管理员下，昨日新增问卷数量 -->
+    <select id="getLastdayAnswerAmountByAdminUserId" resultType="Integer">
+        SELECT (
+                   SELECT count(*) from answer
+                   WHERE user_id in (
+                       select app_user_id from m_user
+                       where create_uid=#{userId}
+                   )
+                   AND create_time between #{startOfYesterday} and #{endOfYesterday}
+        )
+        +
+        (
+        SELECT count(*) FROM answer
+        WHERE store_id in (
+            select store_id from store
+            where create_uid in ( select app_user_id from m_user where create_uid=#{userId} )
+              and is_delete=0
+        )
+        AND create_time between #{startOfYesterday} and #{endOfYesterday}
+        )
+    </select>
+
+<!--     2.4 当前管理员下，昨日参与门店-->
+<!--    <select id="getLastdayAnswerListStoreAmountByAdminUserId" resultType="Long">-->
+<!--        SELECT distinct (store_id) from answer-->
+<!--        where to_days(now()) - to_days(create_time) = 1-->
+<!--        and user_id in (-->
+<!--            select user_id from store-->
+<!--            where   (-->
+<!--                        create_uid=#{userId}		/*管理员创建的门店*/-->
+<!--                        or create_uid in (select app_user_id from m_user where create_uid =#{userId} )  /*客户经理创建的门店*/-->
+<!--                    )-->
+<!--                    and-->
+<!--                    user_id!=0-->
+<!--            UNION-->
+<!--            select user_id from customer_store where store_id in (-->
+<!--                select store_id from store-->
+<!--                where   (-->
+<!--                            create_uid=#{userId}		  /*管理员创建的门店*/-->
+<!--                            or create_uid in (select app_user_id from m_user where create_uid = #{userId} )  /*客户经理创建的门店*/-->
+<!--                        )-->
+<!--                        and-->
+<!--                        user_id!=0-->
+<!--            )-->
+<!--        )-->
+<!--    </select>-->
+
+    <!--     2.4 当前管理员下，昨日参与门店-->
+    <select id="getLastdayAnswerListStoreAmountByAdminUserId" resultType="Integer">
+        SELECT count(distinct store_id) FROM answer
+        WHERE store_id in (
+                select store_id from store
+                 where create_uid in ( select app_user_id from m_user where create_uid=#{userId} )
+                   and is_delete=0
+        )
+          AND create_time between #{startOfYesterday} and #{endOfYesterday}
+    </select>
+
+<!--     2.5 当前管理员下，昨日新增问卷来源 answerTotalLastday -->
+<!--    <select id="getGroupLastdayAnswerListByAdminUserId" resultType="com.xwl.entity.Answer">-->
+<!--        SELECT activity_id, count(answer_id) as total from answer-->
+<!--        WHERE  to_days(now())-to_days(create_time) = 1-->
+<!--        and user_id in (-->
+<!--                select user_id from store-->
+<!--                where   (-->
+<!--                            create_uid=#{userId}		/*管理员创建的门店*/-->
+<!--                            or-->
+<!--                            create_uid in (select app_user_id from m_user where create_uid = #{userId})  /*客户经理创建的门店*/-->
+<!--                        )-->
+<!--                        and-->
+<!--                        user_id!=0-->
+<!--                UNION-->
+<!--                select user_id from customer_store where store_id in (-->
+<!--                    select store_id from store-->
+<!--                    where   (-->
+<!--                                create_uid=#{userId}		/*管理员创建的门店*/-->
+<!--                                or create_uid in (select app_user_id from m_user where create_uid = #{userId})  /*客户经理创建的门店*/-->
+<!--                            )-->
+<!--                    and-->
+<!--                    user_id!=0-->
+<!--                )-->
+<!--        )-->
+<!--        GROUP BY activity_id-->
+<!--    </select>-->
+
+    <!-- 2.5 当前管理员下，昨日新增问卷来源 answerTotalLastday -->
+    <select id="getGroupLastdayAnswerListByAdminUserId" resultType="com.xwl.entity.Answer">
+        SELECT activity_id, count(DISTINCT(answer_id)) as total FROM answer
+        WHERE answer_id IN
+              (
+                  SELECT answer_id from answer
+                  WHERE user_id in (
+                      select app_user_id from m_user where create_uid=#{userId}
+                  )
+                    AND create_time between #{startOfYesterday} and #{endOfYesterday}
+
+                  UNION
+
+                  SELECT answer_id from answer
+                  WHERE store_id in (
+                      select store_id from store
+                      where create_uid in ( select app_user_id from m_user where create_uid=#{userId} )
+                        and is_delete=0
+                  )
+                    AND create_time between #{startOfYesterday} and #{endOfYesterday}
+              )
+        GROUP BY activity_id
+    </select>
+
+    <!--    2.6 当前管理员下，昨日门店来源 storeTotalLastday -->
+<!--    <select id="getGroupLastdayAnswerListStoreAmountByAdminUserId" resultType="com.xwl.entity.Answer">-->
+<!--        SELECT activity_id, count(distinct (store_id)) as total from answer-->
+<!--        where to_days(now()) - to_days(create_time) = 1-->
+<!--        and user_id in (-->
+<!--            select user_id from store-->
+<!--            where   (-->
+<!--                    create_uid=#{userId}    /*管理员创建的门店*/-->
+<!--                    or create_uid in (select app_user_id from m_user where create_uid =#{userId} )  /*客户经理创建的门店*/-->
+<!--                    )-->
+<!--                    and-->
+<!--                    user_id!=0-->
+<!--        UNION-->
+<!--        select user_id from customer_store where store_id in (-->
+<!--            select store_id from store-->
+<!--            where   (-->
+<!--                        create_uid=#{userId}    /*管理员创建的门店*/-->
+<!--                        or create_uid in (select app_user_id from m_user where create_uid = #{userId} )  /*客户经理创建的门店*/-->
+<!--                    )-->
+<!--                    and-->
+<!--                    user_id!=0-->
+<!--            )-->
+<!--        )-->
+<!--        GROUP BY activity_id-->
+<!--    </select>-->
+
+<!--    &lt;!&ndash;    2.6 当前管理员下，昨日门店来源 storeTotalLastday &ndash;&gt;-->
+<!--    <select id="getGroupLastdayAnswerListStoreAmountByAdminUserId" resultType="com.xwl.entity.Answer">-->
+<!--        SELECT activity_id, count(distinct (store_id)) as total from answer-->
+<!--        where to_days(now()) - to_days(create_time) = 1-->
+<!--          and user_id in (-->
+<!--            select user_id from store-->
+<!--            where   (-->
+<!--                        create_uid=#{userId}    /*管理员创建的门店*/-->
+<!--                    or create_uid in (select app_user_id from m_user where create_uid =#{userId} )  /*客户经理创建的门店*/-->
+<!--                )-->
+<!--              and-->
+<!--                user_id!=0-->
+<!--        UNION-->
+<!--        select user_id from customer_store where store_id in (-->
+<!--            select store_id from store-->
+<!--            where   (-->
+<!--                        create_uid=#{userId}    /*管理员创建的门店*/-->
+<!--                    or create_uid in (select app_user_id from m_user where create_uid = #{userId} )  /*客户经理创建的门店*/-->
+<!--                )-->
+<!--              and-->
+<!--                user_id!=0-->
+<!--            )-->
+<!--            )-->
+<!--        GROUP BY activity_id-->
+<!--    </select>-->
+
+    <!--    2.6 当前管理员下，昨日门店来源 storeTotalLastday -->
+    <select id="getGroupLastdayAnswerListStoreAmountByAdminUserId" resultType="com.xwl.entity.Answer">
+
+        SELECT activity_id, count(DISTINCT(store_id)) as total FROM answer
+        WHERE answer_id IN
+              (
+                  SELECT answer_id from answer
+                  WHERE user_id in (
+                      select app_user_id from m_user where create_uid=#{userId}
+                  )
+                    AND create_time between #{startOfYesterday} and #{endOfYesterday}
+
+                  UNION
+
+                  SELECT answer_id from answer
+                  WHERE store_id in (
+                      select store_id from store
+                      where create_uid in ( select app_user_id from m_user where create_uid=#{userId} )
+                        and is_delete=0
+                  )
+                    AND create_time between #{startOfYesterday} and #{endOfYesterday}
+              )
+        GROUP BY activity_id
+    </select>
+
+
+    <!--    3.1 当前客户经理下,累计问卷数量 -->
+    <select id="getAnswerAmountByPartnerUserId" resultType="Integer">
+        SELECT (
+                   SELECT count(*) from answer
+                   WHERE user_id in ( select app_user_id from m_user where user_id=#{userId} )
+               )
+                   +
+               (
+                   SELECT count(*) from answer
+                   WHERE store_id in (
+                       select store_id from store
+                       where create_uid in ( select app_user_id from m_user where user_id=#{userId} )
+                         and is_delete=0
+                   )
+               )
+    </select>
+    <!--    3.2 当前客户经理下,累计参与门店  -->
+    <select id="getStoreAmountByPartnerUserId" resultType="Integer">
+        SELECT count(distinct store_id) FROM answer
+        WHERE store_id in (
+            select store_id from store
+            where create_uid in ( select app_user_id from m_user where user_id=#{userId} )
+              and is_delete=0
+        )
+    </select>
+    <!-- 3.3 当前客户经理下，昨日新增问卷数量 -->
+    <select id="getLastdayAnswerAmountByPartnerUserId" resultType="Integer">
+        SELECT (
+                   SELECT count(*) from answer
+                   WHERE user_id in (
+                       select app_user_id from m_user where user_id=#{userId}
+                   )
+                     AND create_time between #{startOfYesterday} and #{endOfYesterday}
+               )
+                   +
+               (
+                   SELECT count(*) FROM answer
+                   WHERE store_id in (
+                       select store_id from store
+                       where create_uid in ( select app_user_id from m_user where user_id=#{userId} )
+                         and is_delete=0
+                   )
+                     AND create_time between #{startOfYesterday} and #{endOfYesterday}
+               )
+    </select>
+    <!--     3.4 当前客户经理下，昨日参与门店-->
+    <select id="getLastdayAnswerListStoreAmountByPartnerUserId" resultType="Integer">
+        SELECT count(distinct store_id) FROM answer
+        WHERE store_id in (
+            select store_id from store
+            where create_uid in ( select app_user_id from m_user where user_id=#{userId} )
+              and is_delete=0
+        )
+          AND create_time between #{startOfYesterday} and #{endOfYesterday}
+    </select>
+    <!-- 3.5 当前客户经理下，昨日新增问卷来源 answerTotalLastday -->
+    <select id="getGroupLastdayAnswerListByPartnerUserId" resultType="com.xwl.entity.Answer">
+        SELECT activity_id, count(DISTINCT(answer_id)) as total FROM answer
+        WHERE answer_id IN
+              (
+                  SELECT answer_id from answer
+                  WHERE user_id in (
+                      select app_user_id from m_user where user_id=#{userId}
+                  )
+                    AND create_time between #{startOfYesterday} and #{endOfYesterday}
+
+                  UNION
+
+                  SELECT answer_id from answer
+                  WHERE store_id in (
+                      select store_id from store
+                      where create_uid in ( select app_user_id from m_user where user_id=#{userId} )
+                        and is_delete=0
+                  )
+                    AND create_time between #{startOfYesterday} and #{endOfYesterday}
+              )
+        GROUP BY activity_id
+    </select>
+    <!--    3.6 当前客户经理下，昨日门店来源 storeTotalLastday -->
+    <select id="getGroupLastdayAnswerListStoreAmountByPartnerUserId" resultType="com.xwl.entity.Answer">
+
+        SELECT activity_id, count(DISTINCT (store_id)) as total FROM answer
+        WHERE answer_id IN
+              (
+                  SELECT answer_id from answer
+                  WHERE user_id in (
+                      select app_user_id from m_user where user_id=#{userId}
+                  )
+                    AND create_time between #{startOfYesterday} and #{endOfYesterday}
+
+                  UNION
+
+                  SELECT answer_id from answer
+                  WHERE store_id in (
+                      select store_id from store
+                      where create_uid in ( select app_user_id from m_user where user_id=#{userId} )
+                        and is_delete=0
+                  )
+                    AND create_time between #{startOfYesterday} and #{endOfYesterday}
+              )
+        GROUP BY activity_id
+    </select>
+
+
+
+
+    <select fetchSize="-2147483648" resultSetType="FORWARD_ONLY" id="getAnswersByActivityIdWithParm" resultType="com.xwl.entity.Answer" parameterType="com.xwl.entity.Answer">
+        select an.answer_id, s.store_id, s.license_no, s.name, u.nickname, u.user_id, u.user_type, u.mobile, an.location, an.end_time, an.duration
+        from answer an
+        join store s on an.store_id=s.store_id
+        join user u on an.user_id=u.user_id
+        where an.activity_id=#{answer.activityId}
+        <if test=" answer.name!='' and answer.name!=null ">
+            and s.name = #{answer.name}
+        </if>
+        <if test=" answer.licenseNo!='' and answer.licenseNo!=null ">
+            and s.license_no = #{answer.licenseNo}
+        </if>
+    </select>
+
+    <select fetchSize="-2147483648" resultSetType="FORWARD_ONLY" id="exportAnswersByActivityIdWithParm" resultType="com.xwl.entity.Answer" parameterType="com.xwl.entity.Answer">
+        select an.answer_id, s.store_id, s.license_no, s.name, u.nickname, u.user_id, u.user_type, u.mobile, an.location, an.end_time, an.duration
+        from answer an
+        join store s on an.store_id=s.store_id
+        join user u on an.user_id=u.user_id
+        where an.activity_id=#{answer.activityId}
+        <if test=" answer.name!='' and answer.name!=null ">
+            and s.name = #{answer.name}
+        </if>
+        <if test=" answer.licenseNo!='' and answer.licenseNo!=null ">
+            and s.license_no = #{answer.licenseNo}
+        </if>
+    </select>
+
+</mapper>

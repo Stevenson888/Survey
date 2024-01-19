@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xwl.mapper.StoreMapper">
+
+<!--    <select id="getStoreIdListByAllAdmin" resultType="Long">-->
+<!--        select distinct(store_id) from store-->
+<!--         where is_delete=0-->
+<!--           and create_uid in (-->
+<!--                select app_user_id from m_user where create_uid in (-->
+<!--                    select user_id from m_user where role_flag = 'ROLE_ADMIN'-->
+<!--                )-->
+<!--        )-->
+<!--    </select>-->
+    <select id="getCustomerIdListByAllAdmin" resultType="Long">
+        select distinct(user_id) from customer_store where store_id in (
+                select distinct(store_id) from store
+                where create_uid in (
+                            select app_user_id from m_user where create_uid in (
+                                select user_id from m_user where role_flag = 'ROLE_ADMIN'
+                            )
+                      )
+                  and is_delete=0
+        )
+    </select>
+
+
+
+<!--    <select fetchSize="-2147483648" resultSetType="FORWARD_ONLY" id="getStoreListByAdminWithParm" resultType="com.xwl.entity.Store" parameterType="com.xwl.entity.Store">-->
+<!--        select *-->
+<!--        from store-->
+<!--        where is_delete=0-->
+<!--        and create_uid in (-->
+<!--        select app_user_id from m_user where create_uid=#{store.userId}-->
+<!--        )-->
+<!--        <if test=" store.name!='' and store.name!=null ">-->
+<!--            and name = #{store.name}-->
+<!--        </if>-->
+<!--        <if test=" store.licenseNo!='' and store.licenseNo!=null ">-->
+<!--            and license_no = #{store.licenseNo}-->
+<!--        </if>-->
+<!--    </select>-->
+    <select id="getCustomerIdListByAdminUserId" resultType="Long" parameterType="Long">
+        select distinct(user_id) from customer_store where store_id in (
+            select distinct(store_id) from store
+            where create_uid in (
+                select app_user_id from m_user where create_uid=#{userId} and app_user_id!=0
+            )
+            and is_delete=0
+        )
+    </select>
+
+<!--    <resultMap id="userStoreMap" type="com.xwl.entity.User">-->
+<!--        <result property="id" column="id"/>-->
+<!--        <result property="username" column="username"/>-->
+<!--        <result property="password" column="password"/>-->
+<!--        <result property="realName" column="real_name"/>-->
+<!--        <result property="roleFlag" column="role_flag"/>-->
+<!--        <result property="gender" column="gender"/>-->
+<!--        <result property="mobile" column="mobile"/>-->
+<!--        <result property="email" column="email"/>-->
+<!--        <result property="address" column="address"/>-->
+<!--        <result property="status" column="status"/>-->
+
+<!--        &lt;!&ndash;在User类中定义storeList&ndash;&gt;-->
+<!--        <collection property="storeList" javaType="ArrayList" ofType="com.xwl.entity.Store">-->
+<!--            <result property="storeId" column="store_id"/>-->
+<!--            <result property="name" column="name"/>-->
+<!--            <result property="provinceCode" column="province_code"/>-->
+<!--            <result property="provinceName" column="province_name"/>-->
+<!--            <result property="cityCode" column="city_code"/>-->
+<!--            <result property="cityName" column="city_name"/>-->
+<!--            <result property="districtCode" column="district_code"/>-->
+<!--            <result property="districtName" column="district_name"/>-->
+<!--            <result property="detailAddress" column="detail_address"/>-->
+<!--        </collection>-->
+<!--    </resultMap>-->
+
+<!--    <select id="getStoresByUserId" resultMap="userStoreMap">-->
+<!--        SELECT u.id, u.real_name, u.role_flag,-->
+<!--               s.store_id, s.name, s.province_code, s.province_name, s.city_code, s.city_name, s.district_code, s.district_name, s.detail_address-->
+<!--        FROM m_user u-->
+<!--        LEFT JOIN store s-->
+<!--        ON u.id = s.create_uid-->
+<!--        <where>-->
+<!--            <if test="id != null and id != ''">-->
+<!--                and u.id = #{id}-->
+<!--            </if>-->
+<!--            <if test="name != null and name != ''">-->
+<!--                and s.name like concat('%', #{name} ,'%')-->
+<!--            </if>-->
+
+<!--            &lt;!&ndash;            <if test="username != null and username != ''">&ndash;&gt;-->
+<!--            &lt;!&ndash;                and user.username like concat('%', #{username} ,'%')&ndash;&gt;-->
+<!--            &lt;!&ndash;            </if>&ndash;&gt;-->
+<!--            &lt;!&ndash;            <if test="email != null and email != ''">&ndash;&gt;-->
+<!--            &lt;!&ndash;                and user.email like concat('%', #{email} ,'%')&ndash;&gt;-->
+<!--            &lt;!&ndash;            </if>&ndash;&gt;-->
+<!--            &lt;!&ndash;            <if test="address != null and address != ''">&ndash;&gt;-->
+<!--            &lt;!&ndash;                and user.address like concat('%', #{address} ,'%')&ndash;&gt;-->
+<!--            &lt;!&ndash;            </if>&ndash;&gt;-->
+<!--        </where>-->
+<!--    </select>-->
+
+
+        <insert id="insertStore" keyProperty="id" useGeneratedKeys="true" parameterType="com.xwl.entity.Store">
+            Insert INTO store (
+                store_id, user_id, name, license_no, logo, telephone, business_hours, level, trade_level, star_level,
+                province_code, province_name, city_code, city_name, district_code, district_name,
+                detail_address, longitude, latitude, geo_point, location,
+                status, create_uid, create_time, update_time, is_enable, is_delete
+            )
+            VALUES (
+                #{store.storeId}, #{store.userId}, #{store.name}, #{store.licenseNo}, #{store.logo}, #{store.telephone},
+                #{store.businessHours}, #{store.level}, #{store.tradeLevel}, #{store.starLevel},
+                #{store.provinceCode}, #{store.provinceName}, #{store.cityCode}, #{store.cityName}, #{store.districtCode}, #{store.districtName},
+                #{store.detailAddress}, #{store.longitude}, #{store.latitude}, point(0,0), #{store.location},
+                #{store.status}, #{store.createUid}, #{store.createTime}, #{store.updateTime}, #{store.isEnable}, #{store.isDelete}
+            )
+        </insert>
+                    <!-- 经纬度不传或者传的0就这么写,如果传了其他值,就要写成point(#{longitude}, #{latitude}) -->
+
+
+
+        <update id="updateStore" keyProperty="id" parameterType="com.xwl.entity.Store">
+            UPDATE store
+            SET
+                store_id = #{store.storeId},
+                user_id = #{store.userId},
+                <if test=" #{store.name} != '' ">
+                    name = #{store.name},
+                </if>
+                license_no = #{store.licenseNo},
+                logo = #{store.logo},
+                telephone = #{store.telephone},
+                business_hours =  #{store.businessHours},
+                level = #{store.level},
+                trade_level = #{store.tradeLevel},
+                star_level = #{store.starLevel},
+                province_code = #{store.provinceCode},
+                province_name = #{store.provinceName},
+                city_code = #{store.cityCode},
+                city_name = #{store.cityName},
+                district_code = #{store.districtCode},
+                district_name = #{store.districtName},
+                detail_address = #{store.detailAddress},
+                <if test=" store.longitude!=0 and store.longitude!=null and store.latitude!=0 and store.latitude!=null ">
+                    longitude = #{store.longitude},
+                    latitude = #{store.latitude},
+                    geo_point = point(#{store.longitude}, #{store.latitude}),
+                </if>
+                <if test=" store.telephone != '' ">
+                    telephone = #{store.telephone},
+                </if>
+                location = #{store.location},
+                status = #{store.status},
+                create_uid = #{store.createUid},
+                create_time = #{store.createTime},
+                update_time = #{store.updateTime},
+                is_enable = #{store.isEnable},
+                is_delete = #{store.isDelete}
+            WHERE ( store_id = #{store.storeId} AND is_delete=0 )
+        </update>
+
+        <select id="selectStoreIdByLicenseNo" resultType="Integer">
+            SELECT id FROM store WHERE license_no = #{licenseNo} AND is_delete=0 FOR UPDATE
+        </select>
+
+
+<!--    select store_id from store where create_uid=#{userId} and is_delete=0 -->
+    <select fetchSize="-2147483648" resultSetType="FORWARD_ONLY" id="getStoreListByDevWithParm" resultType="com.xwl.entity.Store" parameterType="com.xwl.entity.Store">
+        select *
+        from store
+        where is_delete=0
+        <if test=" store.name!='' and store.name!=null ">
+            and name = #{store.name}
+        </if>
+        <if test=" store.licenseNo!='' and store.licenseNo!=null ">
+            and license_no = #{store.licenseNo}
+        </if>
+    </select>
+
+    <!--    select store_id from store where is_delete=0 and create_uid in (select app_user_id from m_user where create_uid=#{userId} and app_user_id!=0 ) ) -->
+    <select fetchSize="-2147483648" resultSetType="FORWARD_ONLY" id="getStoreListByAdminWithParm" resultType="com.xwl.entity.Store" parameterType="com.xwl.entity.Store">
+        select *
+        from store
+        where is_delete=0
+          and create_uid in (
+                select app_user_id from m_user where create_uid=#{store.userId}
+              )
+        <if test=" store.name!='' and store.name!=null ">
+          and name = #{store.name}
+        </if>
+        <if test=" store.licenseNo!='' and store.licenseNo!=null ">
+          and license_no = #{store.licenseNo}
+        </if>
+    </select>
+
+
+</mapper>

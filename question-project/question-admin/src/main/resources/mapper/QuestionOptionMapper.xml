@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xwl.mapper.QuestionOptionMapper">
+    <select id="getQuestionOptionList" resultType="com.xwl.entity.QuestionOption">
+        SELECT pq.paper_id,  qo.* , q.type, count(ad.option_id) as optionTotal
+        FROM question_option AS qo
+            LEFT JOIN paper_question AS pq  ON qo.question_id = pq.question_id
+            LEFT JOIN question AS q 				ON q.question_id = qo.question_id
+            RIGHT JOIN answer_detail AS ad 	ON qo.option_id = ad.option_id
+        WHERE pq.paper_id=#{paperId}
+        GROUP BY qo.option_id
+        ORDER BY pq.paper_id, pq.question_id, qo.option_id
+    </select>
+    <select id="getQuestionOptionResultList" resultType="com.xwl.entity.ResultQuestionOption">
+       SELECT
+           pq.paper_id,
+           q.question_id, q.type,
+           qo.option_id,  qo.sort, qo.content,
+           count(ad.option_id) as total
+       FROM question_option AS qo
+                LEFT JOIN paper_question AS pq  ON qo.question_id = pq.question_id
+                LEFT JOIN question AS q 		ON q.question_id = qo.question_id
+                RIGHT JOIN answer_detail AS ad 	ON qo.option_id = ad.option_id
+       WHERE pq.paper_id=#{paperId}
+       GROUP BY qo.option_id
+       ORDER BY pq.paper_id, pq.question_id, qo.option_id
+    </select>
+    <select id="getOptionList" resultType="com.xwl.entity.QuestionOption">
+        select * from question_option
+        where question_id =#{questionId}
+    </select>
+
+
+    <!-- 计算： 选择题计算 每个选项 选择了多少次-->
+<!--    <select id="getQuestionOptionResults" resultType="com.xwl.entity.QuestionOption">-->
+<!--        SELECT  a.activity_id, a.paper_id,  ad.question_id, ad.question_title, ad.question_type, ad.option_id,-->
+<!--                    a.answer_id, ad.answer_detail_id,  ad.content,-->
+<!--                    count(ad.answer_detail_id) as optionTotal,-->
+<!--                    a.store_id, a.user_id, a.partner_uid-->
+<!--        FROM        answer_detail ad-->
+<!--        INNER JOIN  answer a on ad.answer_id = a.answer_id-->
+<!--        WHERE       ad.question_type in (1,2)-->
+<!--        AND         a.activity_id=#{activityId}-->
+<!--        GROUP BY    ad.option_id-->
+<!--        ORDER BY    a.paper_id, ad.question_id, ad.option_id-->
+<!--    </select>-->
+
+    <!--  一份问卷多份答卷：选择题：计算 每个选项 选择了多少次-->
+    <select id="getSelectQuestionOptionResultsByActivityId" resultType="com.xwl.entity.QuestionOption">
+        SELECT  a.activity_id, a.paper_id,  ad.question_id, ad.question_title, ad.question_type, ad.option_id,
+                    a.answer_id, ad.answer_detail_id,  ad.content, qo.sort,
+                    count(ad.answer_detail_id) as optionTotal,
+                    a.store_id, a.user_id, a.partner_uid
+        FROM 	    question_option qo
+        INNER JOIN  answer_detail ad 	 	ON  qo.option_id = ad.option_id
+        INNER JOIN  answer a on ad.answer_id = a.answer_id
+        WHERE       ad.question_type in (1,2)
+        AND         a.activity_id=#{activityId}
+        GROUP BY    ad.option_id
+        ORDER BY    a.paper_id, ad.question_id, ad.option_id
+    </select>
+    <!-- 一份问卷多份答卷：填空题: 题干+选项 -->
+    <select id="getBlankQuestionOptionResultsByActivityId" resultType="com.xwl.entity.QuestionOption">
+        SELECT  a.activity_id, a.paper_id,  ad.question_id, ad.question_title, ad.question_type, ad.option_id,
+                    a.answer_id, ad.answer_detail_id, qo.content, ad.content as answer_detail_content, qo.sort,
+                    a.store_id, a.user_id, a.partner_uid
+        FROM 	    question_option qo
+        INNER JOIN  answer_detail ad 	 	ON  qo.option_id = ad.option_id
+        INNER JOIN  answer a on ad.answer_id = a.answer_id
+        WHERE       ad.question_type=3
+        AND         a.activity_id=#{activityId}
+        ORDER BY    a.paper_id, ad.question_id, ad.option_id
+    </select>
+
+<!--    &lt;!&ndash; 填空题: 题干+选项 &ndash;&gt;-->
+<!--    <select id="getBlankQuestionResults" resultType="com.xwl.entity.QuestionOption">-->
+<!--        SELECT  a.activity_id, a.paper_id,  ad.question_id, ad.question_title, ad.question_type, ad.option_id,-->
+<!--                a.answer_id, ad.answer_detail_id, ad.content,-->
+<!--                a.store_id, a.user_id, a.partner_uid-->
+<!--        FROM 	    answer_detail ad-->
+<!--        INNER JOIN  answer a on ad.answer_id = a.answer_id-->
+<!--        WHERE       ad.question_type=3-->
+<!--          AND         a.activity_id=#{activityId}-->
+<!--        ORDER BY    a.paper_id, ad.question_id, ad.option_id-->
+<!--    </select>-->
+
+
+
+<!--    &lt;!&ndash; 一份答卷：选择题：计算 每个选项 选择了多少次&ndash;&gt;-->
+<!--    <select id="getSelectQuestionOptionResultsByAnswerId" resultType="com.xwl.entity.QuestionOption">-->
+<!--        SELECT  a.activity_id, a.paper_id,  ad.question_id, ad.question_title, ad.question_type, ad.option_id,-->
+<!--                a.answer_id, ad.answer_detail_id,  ad.content, qo.sort,-->
+<!--                count(ad.answer_detail_id) as optionTotal,-->
+<!--                a.store_id, a.user_id, a.partner_uid-->
+<!--        FROM 	    question_option qo-->
+<!--                        INNER JOIN  answer_detail ad 	 	ON  qo.option_id = ad.option_id-->
+<!--                        INNER JOIN  answer a on ad.answer_id = a.answer_id-->
+<!--        WHERE       ad.question_type in (1,2)-->
+<!--          AND         a.answer_id=#{answerId}-->
+<!--        GROUP BY    ad.option_id-->
+<!--        ORDER BY    a.paper_id, ad.question_id, ad.option_id-->
+<!--    </select>-->
+<!--    &lt;!&ndash; 一份答卷：填空题: 题干+选项 &ndash;&gt;-->
+<!--    <select id="getBlankQuestionOptionResultsByAnswerId" resultType="com.xwl.entity.QuestionOption">-->
+<!--        SELECT  a.activity_id, a.paper_id,  ad.question_id, ad.question_title, ad.question_type, ad.option_id,-->
+<!--                a.answer_id, ad.answer_detail_id, qo.content, ad.content as answer_detail_content, qo.sort,-->
+<!--                a.store_id, a.user_id, a.partner_uid-->
+<!--        FROM 	    question_option qo-->
+<!--                        INNER JOIN  answer_detail ad 	 	ON  qo.option_id = ad.option_id-->
+<!--                        INNER JOIN  answer a on ad.answer_id = a.answer_id-->
+<!--        WHERE       ad.question_type=3-->
+<!--          AND         a.answer_id=#{answerId}-->
+<!--        ORDER BY    a.paper_id, ad.question_id, ad.option_id-->
+<!--    </select>-->
+
+
+</mapper>
+

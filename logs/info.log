@@ -1,0 +1,3 @@
+[2024-01-19 01:12:01] INFO  org.springframework.scheduling.concurrent.ExecutorConfigurationSupport 218 shutdown - Shutting down ExecutorService 'applicationTaskExecutor'
+[2024-01-19 01:12:01] INFO  com.alibaba.druid.pool.DruidDataSource 2032 close - {dataSource-1} closing ...
+[2024-01-19 01:12:01] INFO  com.alibaba.druid.pool.DruidDataSource 2104 close - {dataSource-1} closed

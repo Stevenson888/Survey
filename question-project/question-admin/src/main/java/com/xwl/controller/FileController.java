@@ -1,0 +1,219 @@
+package com.xwl.controller;
+
+import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.util.IdUtil;
+import cn.hutool.core.util.StrUtil;
+import cn.hutool.crypto.SecureUtil;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.xwl.entity.Files;
+import com.xwl.entity.User;
+import com.xwl.mapper.FileMapper;
+import com.xwl.service.IFileService;
+import com.xwl.utils.ResultUtils;
+import com.xwl.utils.ResultVo;
+import com.xwl.utils.SpringUtil;
+import com.xwl.utils.TokenUtils;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import javax.annotation.Resource;
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.util.List;
+
+/**
+ * 文件上传相关接口
+ */
+@RestController
+@RequestMapping("/api/file")
+public class FileController {
+
+    @Value("${files.upload.path}")
+    private String fileUploadPath;
+
+    @Resource
+    private FileMapper fileMapper;
+    @Resource
+    private IFileService fileService;
+
+    /**
+     * 文件上传接口
+     * @param file 前端传递过来的文件
+     * @param projectId
+     * @return
+     * @throws IOException
+     */
+    @PostMapping("/upload")
+    public String upload(@RequestParam MultipartFile file, @RequestParam Long projectId) throws IOException {
+
+        User currentUser = TokenUtils.getCurrentUser();
+
+        String originalFilename = file.getOriginalFilename();
+        String type = FileUtil.extName(originalFilename);
+        long size = file.getSize();
+
+        // 定义一个文件唯一的标识码
+        String fileUUID = IdUtil.fastSimpleUUID() + StrUtil.DOT + type;
+
+        java.io.File uploadFile = new java.io.File(fileUploadPath + fileUUID);
+        // 判断配置的文件目录是否存在，若不存在则创建一个新的文件目录
+        java.io.File parentFile = uploadFile.getParentFile();
+        if(!parentFile.exists()) {
+            parentFile.mkdirs();
+        }
+
+        String url;
+        // 获取文件的md5
+        String md5 = SecureUtil.md5(file.getInputStream());
+        // 从数据库查询是否存在相同的记录
+        Files dbFiles = getFileByMd5(md5);
+        if (dbFiles != null) {
+            url = dbFiles.getUrl();
+        } else {
+            // 上传文件到磁盘
+            file.transferTo(uploadFile);
+            // 数据库若不存在重复文件，则不删除刚才上传的文件
+            url = "";
+            if( SpringUtil.isDev() ){
+                url = "http://localhost:8089/api/file/" + fileUUID;
+            }
+            if( SpringUtil.isTest() ){
+                url = "http://43.140.195.12:8089/api/file/" + fileUUID;
+            }
+            if( SpringUtil.isProd() ){
+                url = "https://adminapi.xiangwenli.com/api/file/" + fileUUID;
+//                url = "http://admin.xiangwenli.com/api/file/" + fileUUID;
+            }
+        }
+
+        // 存储数据库
+        Files saveFile = new Files();
+        saveFile.setName(originalFilename);
+        saveFile.setType(type);
+        saveFile.setSize(size/1024); // 单位 kb
+        saveFile.setUrl(url);
+        saveFile.setMd5(md5);
+
+        saveFile.setProjectId(projectId);
+        saveFile.setIsDelete(false);
+        saveFile.setEnable(true);
+        saveFile.setCreateUid(currentUser.getUserId());
+        saveFile.setCreateTime(DateUtil.date());
+
+        fileMapper.insert(saveFile);
+
+        return url;
+    }
+
+    /**
+     * 文件下载接口   http://local host:8089/api/file/{fileUUID}
+     * @param fileUUID
+     * @param response
+     * @throws IOException
+     */
+    @GetMapping("/{fileUUID}")
+    public void download(@PathVariable String fileUUID, HttpServletResponse response) throws IOException {
+        // 根据文件的唯一标识码获取文件
+        java.io.File uploadFile = new java.io.File(fileUploadPath + fileUUID);
+        // 设置输出流的格式
+        ServletOutputStream os = response.getOutputStream();
+        response.addHeader("Content-Disposition", "attachment;filename=" + URLEncoder.encode(fileUUID, "UTF-8"));
+        response.setContentType("application/octet-stream");
+
+        // 读取文件的字节流
+        try {
+            os.write(FileUtil.readBytes(uploadFile));
+        } catch (Exception e) {
+            System.err.println("文件下载失败，文件不存在");
+        }
+        os.flush();
+        os.close();
+    }
+
+
+    /**
+     * 通过文件的md5查询文件
+     * @param md5
+     * @return
+     */
+    private Files getFileByMd5(String md5) {
+        // 查询文件的md5是否存在
+        QueryWrapper<Files> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("md5", md5);
+        List<Files> filesList = fileMapper.selectList(queryWrapper);
+        return filesList.size() == 0 ? null : filesList.get(0);
+    }
+
+    @GetMapping("/getFileListByProjectId/{projectId}")
+    private ResultVo getFileListByProjectId(@PathVariable Long projectId) {
+        // 查询文件的md5是否存在
+        QueryWrapper<Files> queryWrapper = new QueryWrapper<>();
+        queryWrapper.lambda().eq(Files::getProjectId, projectId);
+        queryWrapper.lambda().eq(Files::getIsDelete, false);
+        List<Files> fileList = fileService.list(queryWrapper);
+        return ResultUtils.success("更新成功", fileList);
+    }
+
+    @PostMapping("/update")
+    public ResultVo update(@RequestBody Files files) {
+        return ResultUtils.success("更新成功", fileMapper.updateById(files));
+    }
+
+//    @DeleteMapping("/{id}")
+//    public ResultVo delete(@PathVariable Integer id) {
+//        Files files = fileMapper.selectById(id);
+//        files.setIsDelete(true);
+//        fileMapper.updateById(files);
+//        return ResultUtils.success("删除成功");
+//    }
+
+    @DeleteMapping("/{id}")
+    public ResultVo deleteProjectFile(@PathVariable Integer id) {
+        Files files = fileMapper.selectById(id);
+        files.setIsDelete(true);
+        fileMapper.updateById(files);
+        return ResultUtils.success("删除成功");
+    }
+
+    @PostMapping("/del/batch")
+    public ResultVo deleteBatch(@RequestBody List<Integer> ids) {
+        // select * from sys_file where id in (id,id,id...)
+        QueryWrapper<Files> queryWrapper = new QueryWrapper<>();
+        queryWrapper.in("id", ids);
+        List<Files> files = fileMapper.selectList(queryWrapper);
+        for (Files file : files) {
+            file.setIsDelete(true);
+            fileMapper.updateById(file);
+        }
+        return ResultUtils.success("批量删除成功");
+    }
+
+    /**
+     * 分页查询接口
+     * @param pageNum
+     * @param pageSize
+     * @param name
+     * @return
+     */
+    @GetMapping("/page")
+    public ResultVo findPage(@RequestParam Integer pageNum,
+                           @RequestParam Integer pageSize,
+                           @RequestParam(defaultValue = "") String name) {
+
+        QueryWrapper<Files> queryWrapper = new QueryWrapper<>();
+        // 查询未删除的记录
+        queryWrapper.eq("is_delete", false);
+        queryWrapper.orderByDesc("id");
+        if (!"".equals(name)) {
+            queryWrapper.like("name", name);
+        }
+        return ResultUtils.success("查询成功", fileMapper.selectPage(new Page<>(pageNum, pageSize), queryWrapper));
+    }
+
+
+}

@@ -1,0 +1,129 @@
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.xwl.mapper.UserMapper">
+
+<!--    <update id="updatePassword" keyProperty="id" parameterType="com.xwl.entity.User">-->
+<!--        update m_user set password = #{user.newPassword} where username = #{user.username} and password = #{user.password}-->
+<!--    </update>-->
+
+
+    <!--一对多查询-->
+    <resultMap id="userStoreMap" type="com.xwl.entity.User">
+        <result property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="username" column="username"/>
+        <result property="password" column="password"/>
+        <result property="realName" column="real_name"/>
+        <result property="roleFlag" column="role_flag"/>
+        <result property="gender" column="gender"/>
+        <result property="mobile" column="mobile"/>
+        <result property="email" column="email"/>
+        <result property="address" column="address"/>
+        <result property="status" column="status"/>
+
+        <!--在User类中定义storeList-->
+        <collection property="storeList" javaType="ArrayList" ofType="com.xwl.entity.Store">
+            <!-- user表：一对多的一-->
+            <result property="realName" column="real_name"/>
+            <result property="roleFlag" column="role_flag"/>
+
+            <!-- store表：一对多的多-->
+            <result property="storeId" column="store_id"/>
+            <result property="name" column="name"/>
+            <result property="licenseNo" column="license_no"/>
+            <result property="status" column="status"/>
+            <result property="provinceCode" column="province_code"/>
+            <result property="provinceName" column="province_name"/>
+            <result property="cityCode" column="city_code"/>
+            <result property="cityName" column="city_name"/>
+            <result property="districtCode" column="district_code"/>
+            <result property="districtName" column="district_name"/>
+            <result property="detailAddress" column="detail_address"/>
+        </collection>
+    </resultMap>
+
+    <select id="getStoresByUserId" resultMap="userStoreMap">
+        SELECT u.id, u.user_id, u.real_name, u.role_flag,
+            s.store_id, s.name, s.license_no, s.status,
+            s.province_code, s.province_name, s.city_code, s.city_name, s.district_code, s.district_name, s.detail_address
+        FROM m_user u
+        LEFT JOIN store s
+        ON u.user_id = s.create_uid
+        <where>
+            <if test="userId != null and userId != ''">
+                and u.user_id = #{userId}
+            </if>
+            <if test="name != null and name != ''">
+                and s.name like concat('%', #{name} ,'%')
+            </if>
+
+            <!--            <if test="username != null and username != ''">-->
+            <!--                and user.username like concat('%', #{username} ,'%')-->
+            <!--            </if>-->
+            <!--            <if test="email != null and email != ''">-->
+            <!--                and user.email like concat('%', #{email} ,'%')-->
+            <!--            </if>-->
+            <!--            <if test="address != null and address != ''">-->
+            <!--                and user.address like concat('%', #{address} ,'%')-->
+            <!--            </if>-->
+        </where>
+    </select>
+
+
+
+
+    <!--
+        1.1 当前管理员 1
+        select * from m_user where user_id = '40959201064779776'
+
+        1.2 当前管理员名下的所有客户经理 10
+        select user_id from m_user where create_uid = '40959201064779776'
+
+        1.3 当前管理员名下所有门店
+        select * from store
+        where create_uid='40959201064779776'		管理员创建的门店
+        or create_uid in (select user_id from m_user where create_uid = '40959201064779776')  客户经理创建的门店
+
+        2.1 所有门店的店主user_id 5
+        select user_id from store
+        where (
+            create_uid='40959201064779776'		管理员创建的门店
+            or create_uid in (select user_id from m_user where create_uid = '40959201064779776')  客户经理创建的门店
+        )
+        and user_id!=0
+
+        2.2 所有门店的消费者user_id 131
+        select user_id from customer_store where store_id in (
+                select store_id from store
+                where (
+                        create_uid='40959201064779776'		管理员创建的门店
+                        or create_uid in (select user_id from m_user where create_uid = '40959201064779776')  客户经理创建的门店
+                    )
+                 and user_id!=0
+        )
+
+        2.3 答卷user_id 148
+        SELECT * from answer WHERE user_id in (
+            select user_id from store
+            where (
+                create_uid='40959201064779776'		管理员创建的门店
+                or create_uid in (select user_id from m_user where create_uid = '40959201064779776')  客户经理创建的门店
+            )
+            and user_id!=0
+            UNION
+            select user_id from customer_store where store_id in (
+                select store_id from store
+                where (
+                    create_uid='40959201064779776'		管理员创建的门店
+                    or create_uid in (select user_id from m_user where create_uid = '40959201064779776')  客户经理创建的门店
+                )
+                and user_id!=0
+            )
+        )
+    -->
+
+
+
+    </mapper>
