@@ -1208,7 +1208,7 @@ export default {
   },
   mounted() {
     this.$nextTick(() => {
-      this.tableHeight = window.innerHeight - 250;
+      this.tableHeight = window.innerHeight - 200;
     });
   },
   // mounted() {

@@ -520,7 +520,7 @@ export default {
   },
   mounted() {
     this.$nextTick(() => {
-      this.tableHeight = window.innerHeight - 450;
+      this.tableHeight = window.innerHeight - 200;
     });
   },
   created() {

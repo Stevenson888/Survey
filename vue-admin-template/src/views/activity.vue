@@ -47,7 +47,7 @@
       </el-form-item>
     </el-form>
 
-    <el-table :data="tableData" :height="tableHeight"  border stripe :header-cell-class-name="'headerBg'" height="700px" @selection-change="handleSelectionChange">
+    <el-table :data="tableData" :height="tableHeight"  border stripe :header-cell-class-name="'headerBg'" @selection-change="handleSelectionChange">
 <!--      <el-table-column type="selection" width="55"></el-table-column>-->
 <!--      <el-table-column prop="id" label="ID" width="80" sortable></el-table-column>-->
 <!--      <el-table-column prop="activityId" label="活动id(FT)"></el-table-column>-->

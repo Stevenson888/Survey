@@ -1,0 +1,68 @@
+#端口号配置
+server:
+  port: 8089
+#数据库连接配置
+spring:
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://110.42.142.176:33089/xiangwenli?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
+    username: xwl_test
+    password: Np8YIGMwzyoAy02d
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+
+#解决druid 日志报错：discard long time none received connection:xxx
+Ddruid:
+  mysql:
+    usePingMethod: false
+
+files:
+  upload:
+    path: C:\\Projects\\Survey\\question-project\\question-admin\\src\main\\resources\\file\\
+#file:
+#  ip：localhost
+
+web:
+  uploadpath: D:/images/  #图片上传的路径
+  load-path: file:D://images/ #图片访问、加载的路径
+
+#mybatis plus配置
+mybatis-plus:
+#  configuration:
+#    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      #配置mybatis plus 在更新时只更新非空和非NULL的字段
+      update-strategy: not_empty
+
+#log4j2
+logging:
+  config: classpath:log4j2.xml
+  pattern:
+    console: '%d{yyyy-MM-dd} [%thread] %-5level %logger- %msg%n'
+  level:
+    root: INFO
+
+
+snowflake:
+  idworker:
+    worker-id: 1
+    datacenter-id: 1
+
+#  logging.level.com.example.demo.dao=DEBUG
+#  pagehelper.helperDialect=mysql
+#  pagehelper.reasonable=true
+#  pagehelper.supportMethodsArguments=true
+#  pagehelper.params=count=countSql
+#  pagehelper.page-size-zero=true
+#pagehelper:
+#  helperDialect: mysql
+#  reasonable: true
+#  supportMethodsArguments: true
+#  params: count=countSql

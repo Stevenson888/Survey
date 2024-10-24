@@ -23,10 +23,10 @@ import java.util.List;
 
 /**
  * <p>
- * 
+ *
  * </p>
  *
- * @author 
+ * @author
  * @since 2023-07-30
  */
 @Data
@@ -123,8 +123,8 @@ public class Store implements Serializable {
     @ApiModelProperty("是否删除")
     private Boolean isDelete;
 
-    @ApiModelProperty("bind_time")
-    private Date bindTime;
+//    @ApiModelProperty("bind_time")
+//    private Date bindTime;
 
     @TableField(exist = false)
     private String realName;

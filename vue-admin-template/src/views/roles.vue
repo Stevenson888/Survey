@@ -13,7 +13,7 @@
       </el-form-item>
     </el-form>
 
-    <el-table :data="tableList" border stripe :header-cell-class-name="'headerBg'"  @selection-change="handleSelectionChange">
+    <el-table :data="tableList" :height="tableHeight" border stripe :header-cell-class-name="'headerBg'"  @selection-change="handleSelectionChange">
 <!--      <el-table-column type="selection" ></el-table-column>-->
       <el-table-column prop="id" label="ID" width="200px"></el-table-column>
       <el-table-column prop="name" label="名称" ></el-table-column>
@@ -93,6 +93,7 @@ export default {
     return {
       //表格的数据
       tableList: [],
+      tableHeight: 0,
       parms: {
         name: "",
         total: 0,
@@ -119,6 +120,12 @@ export default {
       ids: [],
       user: localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user")) : {}
     }
+  },
+  mounted() {
+    this.$nextTick(() => {
+      // setTimeout(() => this.tableHeight = window.innerHeight - 250, 500);
+      this.tableHeight = window.innerHeight - 200;
+    });
   },
   created() {
     this.user = localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user")) : {}
